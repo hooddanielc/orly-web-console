@@ -1,3 +1,4 @@
 __all__ = [
-  'home_page'
+  'home_page',
+  'console_page'
 ]
