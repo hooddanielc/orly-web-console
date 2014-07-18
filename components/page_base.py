@@ -9,7 +9,6 @@ class PageBase(Component):
     return ""
 
   CSS_NAMES = (
-    'static/modules/page-base/page-base.css',
     'static/main/third-party/bootstrap/css/bootstrap.min.css',
     'static/main/third-party/bootstrap/css/bootstrap-theme.min.css',
   )

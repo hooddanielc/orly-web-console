@@ -17,6 +17,6 @@ class MyPage(Page):
     'home-page': file('static/pages/home-page/home-page.mustache').read()
   }
 
-@route('/index.html')
+@route('/')
 def route_home():
   return MyPage().render()

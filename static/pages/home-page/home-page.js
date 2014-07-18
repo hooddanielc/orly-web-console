@@ -1,11 +1,7 @@
 app.modules.HomePage = app.modules.PageBase.extend({
 
-  initializePage: function() {
-    console.log('initializePage');
-  },
-
   renderPage: function() {
-    console.log('renderPage');
+    this.elContainer.html(app.mustache['home-page']);
   }
 
 });
