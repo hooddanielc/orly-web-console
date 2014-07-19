@@ -1,3 +1,5 @@
 __all__ = [
-  'page_base'
+  'page_base',
+  'orly_editor',
+  'orly_control_panel'
 ]

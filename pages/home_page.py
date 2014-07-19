@@ -12,7 +12,9 @@ class MyPage(Page):
     return "Orly Web Console"
 
   JS_NAMES = ('static/pages/home-page/home-page.js',)
+
   CSS_NAMES = ('static/pages/home-page/home-page.css',)
+
   MUSTACHE_DICT = {
     'home-page': file('static/pages/home-page/home-page.mustache').read()
   }
