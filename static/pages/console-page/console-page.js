@@ -148,6 +148,10 @@ app.modules.Page = app.modules.PageBase.extend({
     this.model.on('connection-closed', function(e) {
       console.log('CONNECTION CLOSED', e);
     });
+
+    for(var x in this.model) {
+      console.log(x);
+    }
   }
 
 });
