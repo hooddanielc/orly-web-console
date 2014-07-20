@@ -1,7 +1,7 @@
-app.modules.OrlyEditorModel = Backbone.View.extend({
+app.modules.OrlyEditorModel = Backbone.Model.extend({
   
   defaults: {
-    source: "hello = 'hello world';"
+    source: 'hello = "hello world";'
   },
 
 });
@@ -17,6 +17,7 @@ app.modules.OrlyEditor = Backbone.View.extend({
       mode: 'text/x-c++src',
       styleActiveLine: true,
       theme: 'solarized',
+      value: this.model.get('source'),
       extraKeys: {
         F11: function(cm) {
           cm.setOption('fullScreen', !cm.getOption('fullScreen'));
@@ -32,6 +33,7 @@ app.modules.OrlyEditor = Backbone.View.extend({
         },
       }
     });
+
   }
 
 });

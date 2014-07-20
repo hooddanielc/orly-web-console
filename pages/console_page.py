@@ -13,7 +13,10 @@ class MyPage(Page):
   def title(self):
     return "Orly Web Console"
 
-  JS_NAMES = ('static/pages/console-page/console-page.js',)
+  JS_NAMES = (
+    'static/main/third-party/broofa-node-uuid.js',
+    'static/pages/console-page/console-page.js',
+  )
 
   CSS_NAMES = ('static/pages/console-page/console-page.css',)
 
