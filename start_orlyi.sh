@@ -1,0 +1,1 @@
+orlyi --create=true --instance_name=orly_web_console --la --le --mem_sim=true --package_dir=/home/dhoodlum/orly/packages --starting_state=SOLO --block_cache_size=256.0 --mem_sim_mb=1024 --page_cache_size=256.0

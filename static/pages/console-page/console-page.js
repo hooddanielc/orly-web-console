@@ -12,17 +12,7 @@ app.modules.OrlyDBModel = Backbone.Model.extend({
     connected: false
   },
 
-  on: function(msg, fn) {
-    
-    if (this.connection) {
-      this.connection.addEventListener(msg, fn);
-    }
-
-    Backbone.Model.prototype.on.call(this);
-  },
-
-  initialize: function() {
-
+  initialize: function () {
     /* make sure connected is false */
     this.set('connected', false);
 
@@ -33,7 +23,7 @@ app.modules.OrlyDBModel = Backbone.Model.extend({
     this.connection = new WebSocket('ws://' + this.get('host') + ':8082/');
 
     var pass = 'OrlyDBModel';
-    this.connection.addEventListener('open', function(e) {
+    this.connection.addEventListener('open', function (e) {
       self.trigger('open', e);
 
       if (!self.get('connect')) {
@@ -43,19 +33,18 @@ app.modules.OrlyDBModel = Backbone.Model.extend({
       self.connect();
     });
 
-    this.connection.addEventListener('close', function(e) {
+    this.connection.addEventListener('close', function (e) {
       self.set('connected', false);
       self.trigger('connection-closed', e);
     });
 
-    this.connection.addEventListener('error', function(e) {
+    this.connection.addEventListener('error', function (e) {
       self.trigger('connection-error', e);
     });
 
     var messageQueue = [];
 
-    this.connection.addEventListener('message', function(e) {
-
+    this.connection.addEventListener('message', function (e) {
       var obj = $.parseJSON(e.data);
 
       if (messageQueue.length === 0) {
@@ -70,22 +59,20 @@ app.modules.OrlyDBModel = Backbone.Model.extend({
       }
 
       if (obj.status === 'ok') {
-
         if (thisMessage.fn) {
           thisMessage.fn(obj);  
         }
-
         return;
       }
 
       if (thisMessage.fnError) {
+        self.trigger('error', e);
         thisMessage.fnError(obj);
       }
 
     });
 
-    this.send = function(msg, fn, fnError) {
-
+    this.send = function (msg, fn, fnError) {
       messageQueue.push({
         msg: msg,
         fn: fn,
@@ -99,8 +86,73 @@ app.modules.OrlyDBModel = Backbone.Model.extend({
 
   },
 
-  connect: function() {
+  compile: function (src, fn) {
+    var self = this;
+    fn = fn || function () {};
+    this.trigger('log', '=== attempting to compile === \n\n' + src);
+    this.send('compile' + JSON.stringify(src) + ';', function (e) {
+      var msg = '=== compiler output ===\n\n';
+      if (e.result.status == 'error') {
+        msg += '\nCompilation failed\n\n';
+        msg += 'kind: ' + e.result.kind;
+        msg += 'diagnostics: ' + e.result.diagnostics + '\n';
+        self.trigger('log', msg);
+        fn(e);
+        return;
+      }
 
+      msg += 'name: ' + e.result.name + '\n';
+      msg += 'version: ' + e.result.version + '\n';
+      msg += 'status: ' + e.status + '\n';
+      self.trigger('log', msg);
+      fn(e);
+    });
+  },
+
+  installPackage: function (pkg, fn) {
+    fn = fn || function () {};
+    this.trigger('log', 'attempting to install "' + pkg + '"');
+    var self = this;
+    this.send('install ' + pkg + ';', function (e) {
+      self.trigger('log', 'successfully installed: ' + pkg + '\n\n');
+      fn(e);
+    }, function (e) {
+      self.trigger('log', 'failed package install: ' + pkg + '\n');
+      self.trigger('log', 'result: ' + e.result + '\n\n');
+      fn(e);
+    });
+  },
+
+  getPackages: function (fn) {
+    fn = fn || function () {};
+    this.trigger('log', 'Listing packages..');
+    var self = this;
+    this.send('list_packages;', function (e) {
+      var msg = '\n === Packgages currently installed === \n';
+
+      for (var i in e.result.packages) {
+        msg += e.result.packages[i].name + 
+        '.' + e.result.packages[i].version + '\n';
+      }
+
+      self.trigger('log', msg);
+      fn(e);
+    });
+  },
+
+  execute: function (packageName, functionName, args, fn) {
+    fn = fn || function () {};
+    var cmd = 'try {' + this.get('pov') + '} ' + packageName + ' ' +
+      functionName + ' <{' + args.join(', ') + '}>;';
+
+    this.send(cmd, function (e) {
+      fn(e);
+    }, function (e) {
+      fn(e);
+    });
+  },
+
+  connect: function () {
     if (this.get('connected') === true) {
       return;
     }
@@ -109,16 +161,47 @@ app.modules.OrlyDBModel = Backbone.Model.extend({
 
     this.send('new session;', function(e) {
       self.set('session', e.result);
-      self.trigger('connected', e);
+      self.trigger('new-session', e);
+      self.trigger('log', 'received new session: ' + e.result + '  \n\n');
+      self.send('new fast private pov;', function(e) {
+        self.set('pov', e.result);
+        self.trigger('new-pov');
+        self.trigger('connected');
+        self.trigger('log', 'Received new fast pov: ' + e.result + '\n\n');
+        self.trigger('log', 'Congratualations, you are connected \n\n');
+      }, function (e) {
+        self.trigger('log', 'error trying to get fast private pov');
+      });
+    }, function (e) {
+      self.trigger('log', 'error trying to get new session');
     });
+  },
 
+  disconnect: function (msg) {
+
+    if (this.get('connected') !== true) {
+      return;
+    }
+
+    this.set('session', null);
+    this.set('pov', null);
+
+    msg = msg || "manually called disconnected";
+
+    this.trigger('disconnected', msg);
   }
 
 });
 
 app.modules.Page = app.modules.PageBase.extend({
 
-  renderPage: function() {
+  initializePage: function() {
+    this.model.on('log', function (e) {
+      console.log(e);
+    });
+  },
+
+  renderPage: function () {
     // render base html
     this.elContainer.html(app.mustache['console-page']);
 
@@ -129,29 +212,6 @@ app.modules.Page = app.modules.PageBase.extend({
     });
 
     this.controlPanel.render();
-    var self = this;
-
-    this.model.on('connected', function(e) {
-      console.log('CONNECTED: ');
-      console.log(this.get('session'));
-      console.log(e);
-    });
-
-    this.model.on('open', function(e) {
-      console.log('CONNECTION-OPEN');
-    });
-
-    this.model.on('connection-error', function(e) {
-      console.log('CONNECTION ERROR', e);
-    });
-
-    this.model.on('connection-closed', function(e) {
-      console.log('CONNECTION CLOSED', e);
-    });
-
-    for(var x in this.model) {
-      console.log(x);
-    }
   }
 
 });
